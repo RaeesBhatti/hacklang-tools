@@ -28,7 +28,13 @@ func main() {
 		return
 	}
 
-	cmd := exec.Command("hh_client", os.Args[1:]...)
+	runSplits := strings.Split(os.Args[0], string(os.PathSeparator))
+	runCommand := string(runSplits[len(runSplits) - 1])
+
+	// Remove this when building
+	runCommand = "hh_client"
+
+	cmd := exec.Command(runCommand, os.Args[1:]...)
 
 	if runtime.GOOS == "windows" && conf.Provider == "wsl" {
 		cmd = exec.Command("bash", "-c",
@@ -41,7 +47,7 @@ func main() {
 			panic(err)
 		}
 		cmd = exec.Command("docker", "exec", containerId,
-			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; hh_client ` +  strings.Join(os.Args[1:], " "))
+			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " "))
 	}
 
 	stdout, err := cmd.StdoutPipe();
