@@ -3,7 +3,6 @@ package main
 import (
 	"os/exec"
 	"os"
-	"io"
 	"fmt"
 	"strings"
 	"errors"
@@ -35,46 +34,78 @@ func main() {
 	// Remove this when building
 	runCommand = "hh_client"
 
-	cmd := exec.Command(runCommand, os.Args[1:]...)
-
 	if conf.Provider == "wsl" {
 		if runtime.GOOS != "windows" {
 			fmt.Println("Windows Subsystem for linux is only supported with Windows. Please choose Docker as Provider.")
 			return
 		}
 
-		cmd = exec.Command("bash", "-c", `"` + strings.Join(os.Args[1:], " ") + `"`)
-		cmd.Dir = pwd
+		outBuff, errBuff, err := executeCommand("bash", []string{"-c", `"` + strings.Join(os.Args[1:], " ") + `"`}, pwd)
+
+		if err != nil {
+			panic(err)
+		}
+		fmt.Print(outBuff, errBuff)
+
+		return
 
 	} else if conf.Provider == "docker" {
 		containerId, err := getDockerContainerId(conf.RemotePath, conf.Image)
 		if err != nil {
 			panic(err)
 		}
-		cmd = exec.Command("docker", "exec", containerId,
-			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " "))
-	} else {
-		fmt.Println(`Please choose either "wsl" or "docker" as Provider.`)
+
+		_, errBuff, err := executeCommand("docker", []string{"exec", containerId,
+			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
+			"")
+
+		if err != nil {
+			panic(err)
+		}
+
+		if len(errBuff.String()) > 0 {
+			if strings.Contains(errBuff.String(), containerId + " is not running") {
+				fmt.Println("Docker container is not running, going to start again")
+				err := startDockerContainer(containerId)
+				if err != nil {
+					panic(err)
+				}
+			} else if strings.Contains(errBuff.String(), "No such container: " + containerId) {
+				containerId, err := createDockerContainer(conf.RemotePath, conf.Image, getTempPath(conf.LocalPath))
+
+				if err != nil {
+					panic(err)
+				}
+
+				outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerId,
+					"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
+					"")
+				if err != nil {
+					panic(err)
+				}
+
+				fmt.Print(outBuff.String(), errBuff.String())
+
+				return
+			}
+
+		}
+
+		outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerId,
+			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
+			"")
+
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Print(outBuff.String(), errBuff.String())
+
 		return
+
 	}
 
-	stdout, err := cmd.StdoutPipe();
-	if err != nil {
-		panic(err)
-	}
-	stderr, err := cmd.StderrPipe();
-	if err != nil {
-		panic(err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		panic(err)
-	}
-
-	defer cmd.Wait()
-
-	go io.Copy(os.Stdout, stdout)
-	go io.Copy(os.Stderr, stderr)
+	fmt.Println(`Please choose either "wsl" or "docker" as Provider.`)
 
 }
 
