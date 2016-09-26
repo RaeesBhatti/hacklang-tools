@@ -195,8 +195,8 @@ type Config struct {
 }
 
 func (c Config) verify() bool {
-	if len(c.Provider) < 1 {
-		return false
+	if len(c.Provider) > 0 {
+		return true
 	}
-	return true
+	return false
 }
