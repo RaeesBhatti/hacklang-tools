@@ -195,6 +195,17 @@ func createDockerContainer(path string, image string, tmp string) (string, error
 	return toReturn, nil
 }
 
+func startDockerContainer(containerID string) error {
+	_, errBuff, err := executeCommand("docker", []string{"start", containerID}, "")
+	if err != nil {
+		return err
+	} else if len(errBuff.String()) > 0 {
+		return errors.New(errBuff.String())
+	}
+
+	return nil
+}
+
 func executeCommand(command string, args []string, pwd string) (*bytes.Buffer, *bytes.Buffer, error) {
 	cmd := exec.Command(command, args...)
 
