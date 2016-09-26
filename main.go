@@ -14,6 +14,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"bufio"
+	"bytes"
 )
 
 func main() {
@@ -192,6 +193,37 @@ func createDockerContainer(path string, image string, tmp string) (string, error
 	fmt.Println("Docker container has been started successfuly")
 
 	return toReturn, nil
+}
+
+func executeCommand(command string, args []string, pwd string) (*bytes.Buffer, *bytes.Buffer, error) {
+	cmd := exec.Command(command, args...)
+
+	if len(pwd) > 0 {
+		cmd.Dir = pwd
+	}
+
+	outBuff := new(bytes.Buffer)
+	errBuff := new(bytes.Buffer)
+
+	stdout, err := cmd.StdoutPipe();
+	if err != nil {
+		return outBuff, errBuff, nil
+	}
+	stderr, err := cmd.StderrPipe();
+	if err != nil {
+		return outBuff, errBuff, nil
+	}
+
+	if err := cmd.Start(); err != nil {
+		return outBuff, errBuff, nil
+	}
+
+	defer cmd.Wait()
+
+	outBuff.ReadFrom(stdout)
+	errBuff.ReadFrom(stderr)
+
+	return outBuff, errBuff, nil
 }
 
 type Config struct {
