@@ -36,18 +36,25 @@ func main() {
 
 	cmd := exec.Command(runCommand, os.Args[1:]...)
 
-	if runtime.GOOS == "windows" && conf.Provider == "wsl" {
-		cmd = exec.Command("bash", "-c",
-			`"` + strings.Join(os.Args[1:], " ") + `"`)
+	if conf.Provider == "wsl" {
+		if runtime.GOOS != "windows" {
+			fmt.Println("Windows Subsystem for linux is only supported with Windows. Please choose Docker as Provider.")
+			return
+		}
+
+		cmd = exec.Command("bash", "-c", `"` + strings.Join(os.Args[1:], " ") + `"`)
 		cmd.Dir = pwd
-	}
-	if conf.Provider == "docker" {
+
+	} else if conf.Provider == "docker" {
 		containerId, err := getDockerContainerId(conf.RemotePath, conf.Image)
 		if err != nil {
 			panic(err)
 		}
 		cmd = exec.Command("docker", "exec", containerId,
 			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " "))
+	} else {
+		fmt.Println(`Please choose either "wsl" or "docker" as Provider.`)
+		return
 	}
 
 	stdout, err := cmd.StdoutPipe();
