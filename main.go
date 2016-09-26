@@ -134,7 +134,7 @@ func getDockerContainerId(path string, image string) (string, error) {
 	if _, err := os.Stat(tmp); err == nil {
 		dat, err := ioutil.ReadFile(tmp)
 		if err != nil {
-			panic(err)
+			return toReturn, err
 		}
 
 		if len(dat) != 64 {
