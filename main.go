@@ -12,7 +12,6 @@ import (
 	"runtime"
 	"crypto/sha1"
 	"encoding/hex"
-	"bufio"
 	"bytes"
 )
 
@@ -50,12 +49,10 @@ func main() {
 		return
 
 	} else if conf.Provider == "docker" {
-		containerId, err := getDockerContainerId(conf.RemotePath, conf.Image)
-		if err != nil {
-			panic(err)
-		}
 
-		_, errBuff, err := executeCommand("docker", []string{"exec", containerId,
+		containerName := getContainerName(conf.LocalPath)
+
+		_, errBuff, err := executeCommand("docker", []string{"exec", containerName,
 			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
 			"")
 
@@ -64,20 +61,19 @@ func main() {
 		}
 
 		if len(errBuff.String()) > 0 {
-			if strings.Contains(errBuff.String(), containerId + " is not running") {
+			if strings.Contains(errBuff.String(), "is not running") {
 				fmt.Println("Docker container is not running, going to start again")
-				err := startDockerContainer(containerId)
+				err := startDockerContainer(containerName)
 				if err != nil {
 					panic(err)
 				}
-			} else if strings.Contains(errBuff.String(), "No such container: " + containerId) {
-				containerId, err := createDockerContainer(conf.RemotePath, conf.Image, getTempPath(conf.LocalPath))
-
+			} else if strings.Contains(errBuff.String(), "No such container: ") {
+				err := createDockerContainer(conf.RemotePath, conf.Image, containerName)
 				if err != nil {
 					panic(err)
 				}
 
-				outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerId,
+				outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerName,
 					"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
 					"")
 				if err != nil {
@@ -91,10 +87,9 @@ func main() {
 
 		}
 
-		outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerId,
+		outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerName,
 			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
 			"")
-
 		if err != nil {
 			panic(err)
 		}
@@ -157,78 +152,28 @@ func determineRemotePath(path string, provider string) string {
 	return path
 }
 
-func getDockerContainerId(path string, image string) (string, error) {
-	var toReturn string
-
-	tmp := getTempPath(path)
-
-	if _, err := os.Stat(tmp); err == nil {
-		dat, err := ioutil.ReadFile(tmp)
-		if err != nil {
-			return toReturn, err
-		}
-
-		if len(dat) != 64 {
-			id, err := createDockerContainer(path, image, tmp)
-			if err != nil {
-				return toReturn, err
-			}
-			return id, nil
-		}
-		return string(dat), nil
-	}
-	id, err := createDockerContainer(path, image, tmp)
-	if err != nil {
-		return toReturn, err
-	}
-	return id, nil
-}
-
-func getTempPath(path string) string {
+func getContainerName(path string) string {
 	h := sha1.New()
 	h.Write([]byte(path))
 	hash := hex.EncodeToString(h.Sum(nil))
 
-	return filepath.Join(os.TempDir(), "hhtools_" + hash + ".tmp")
+	return "hhtools_" + hash
 }
 
-func createDockerContainer(path string, image string, tmp string) (string, error) {
-	var toReturn string
+func createDockerContainer(path string, image string, containerName string) error {
 
 	fmt.Println("Starting Docker container. It may take some time if container image has to be downloaded.")
 
-	cmd := exec.Command("docker", "run", "-t", "-d", "-v",  path + ":" + path, image)
-	stdout, err := cmd.StdoutPipe()
+	_, errBuff, err := executeCommand("docker",
+		[]string{"run", "-t", "-d", "--name=" + containerName, "-v", path + ":" + path, image}, "")
 	if err != nil {
-		return toReturn, err
-	}
-	scanner := bufio.NewScanner(stdout)
-	go func() {
-		for scanner.Scan() {
-			toReturn += scanner.Text()
-		}
-	}()
-	err = cmd.Start()
-	if err != nil {
-		return toReturn, err
-	}
-
-	err = cmd.Wait()
-	if err != nil {
-		return toReturn, err
-	}
-
-	splits := strings.Split(toReturn, "\n")
-	toReturn = string(splits[len(splits) - 1])
-
-	err = ioutil.WriteFile(tmp, []byte(toReturn), 0644)
-	if err != nil {
-		return toReturn, err
+		return err
+	} else if len(errBuff.String()) > 0 {
+		return errors.New(errBuff.String())
 	}
 
 	fmt.Println("Docker container has been started successfuly")
-
-	return toReturn, nil
+	return nil
 }
 
 func startDockerContainer(containerID string) error {
