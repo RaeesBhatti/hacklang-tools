@@ -128,11 +128,8 @@ func determineRemotePath(path string, provider string) string {
 
 func getDockerContainerId(path string, image string) (string, error) {
 	var toReturn string
-	h := sha1.New()
-	h.Write([]byte(path))
-	hash := hex.EncodeToString(h.Sum(nil))
 
-	tmp := filepath.Join(os.TempDir(), "hhtools_" + hash + ".tmp")
+	tmp := getTempPath(path)
 
 	if _, err := os.Stat(tmp); err == nil {
 		dat, err := ioutil.ReadFile(tmp)
@@ -154,6 +151,14 @@ func getDockerContainerId(path string, image string) (string, error) {
 		return toReturn, err
 	}
 	return id, nil
+}
+
+func getTempPath(path string) string {
+	h := sha1.New()
+	h.Write([]byte(path))
+	hash := hex.EncodeToString(h.Sum(nil))
+
+	return filepath.Join(os.TempDir(), "hhtools_" + hash + ".tmp")
 }
 
 func createDockerContainer(path string, image string, tmp string) (string, error) {
