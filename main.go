@@ -134,7 +134,7 @@ func readConfig(pwd string) (Config, error) {
 				return config, errors.New("Invalid configuration detected")
 			}
 			config.LocalPath = filepath.Dir(file)
-			config.RemotePath = determineRemotePath(filepath.Dir(file), config.Provider)
+			config.RemotePath = translateLocalPath(filepath.Dir(file), config.Provider)
 			return config, nil
 		}
 	}
@@ -142,7 +142,7 @@ func readConfig(pwd string) (Config, error) {
 	return config, errors.New("No .hhtools config file found in the current or any parent directory.")
 }
 
-func determineRemotePath(path string, provider string) string {
+func translateLocalPath(path string, provider string) string {
 	if runtime.GOOS == "windows" && provider == "docker" {
 		return filepath.ToSlash(
 			strings.Replace(path, filepath.VolumeName(path),
