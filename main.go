@@ -152,6 +152,18 @@ func translateLocalPath(path string, provider string) string {
 	return path
 }
 
+func escapePathForWindows(path string) string {
+	if runtime.GOOS == "windows" {
+		return strings.Join(
+			strings.Split(
+				strings.Join(
+					strings.Split(path, string(os.PathSeparator)), string(os.PathSeparator) + string(os.PathSeparator)),
+				"/"),
+			string(os.PathSeparator) + string(os.PathSeparator))
+	}
+	return path
+}
+
 func getContainerName(path string) string {
 	h := sha1.New()
 	h.Write([]byte(path))
