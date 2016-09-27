@@ -52,49 +52,17 @@ func main() {
 
 		containerName := getContainerName(conf.LocalPath)
 
-		_, errBuff, err := executeCommand("docker", []string{"exec", containerName,
+		outBuff, errBuff, err := dockerExec("docker", []string{"exec", containerName,
 			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
-			"")
-
+			containerName, runCommand, conf)
 		if err != nil {
 			panic(err)
 		}
 
-		if len(errBuff.String()) > 0 {
-			if strings.Contains(errBuff.String(), "is not running") {
-				fmt.Println("Docker container is not running, going to start again")
-				err := startDockerContainer(containerName)
-				if err != nil {
-					panic(err)
-				}
-			} else if strings.Contains(errBuff.String(), "No such container: ") {
-				err := createDockerContainer(conf.RemotePath, conf.Image, containerName)
-				if err != nil {
-					panic(err)
-				}
+		stdOut := correctPaths(outBuff.String(), &conf)
+		stdErr := correctPaths(errBuff.String(), &conf)
 
-				outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerName,
-					"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
-					"")
-				if err != nil {
-					panic(err)
-				}
-
-				fmt.Print(outBuff.String(), errBuff.String())
-
-				return
-			}
-
-		}
-
-		outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerName,
-			"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
-			"")
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Print(outBuff.String(), errBuff.String())
+		fmt.Print(stdOut, stdErr)
 
 		return
 
@@ -157,7 +125,8 @@ func escapePathForWindows(path string) string {
 		return strings.Join(
 			strings.Split(
 				strings.Join(
-					strings.Split(path, string(os.PathSeparator)), string(os.PathSeparator) + string(os.PathSeparator)),
+					strings.Split(path, string(os.PathSeparator)),
+					string(os.PathSeparator) + string(os.PathSeparator)),
 				"/"),
 			string(os.PathSeparator) + string(os.PathSeparator))
 	}
