@@ -164,6 +164,29 @@ func escapePathForWindows(path string) string {
 	return path
 }
 
+func correctPaths(input string, conf *Config) string {
+
+	if runtime.GOOS == "windows" {
+		var output string
+
+		for key, val := range strings.Split(input, translateLocalPath(conf.LocalPath, conf.Provider)) {
+			if key != 0 {
+				newVal := []string{}
+				for _, v := range strings.Split(val, `"`) {
+					newVal = append(newVal, escapePathForWindows(v))
+				}
+				output += escapePathForWindows(conf.LocalPath) + strings.Join(newVal, `"`)
+			} else {
+				output += val
+			}
+		}
+
+		return output
+	}
+
+	return input
+}
+
 func getContainerName(path string) string {
 	h := sha1.New()
 	h.Write([]byte(path))
