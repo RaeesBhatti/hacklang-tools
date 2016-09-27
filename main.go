@@ -218,6 +218,42 @@ func executeCommand(command string, args []string, pwd string) (*bytes.Buffer, *
 	return outBuff, errBuff, nil
 }
 
+func dockerExec(command string, args []string, containerName string, runCommand string, conf Config) (*bytes.Buffer, *bytes.Buffer, error) {
+
+	outBuff, errBuff, err := executeCommand(command, args, "")
+
+	if err != nil {
+		panic(err)
+	}
+
+	if len(errBuff.String()) > 0 {
+		if strings.Contains(errBuff.String(), "is not running") {
+			fmt.Println("Docker container is not running, going to start again")
+			err := startDockerContainer(containerName)
+			if err != nil {
+				return outBuff, errBuff, err
+			}
+		} else if strings.Contains(errBuff.String(), "No such container: ") {
+			err := createDockerContainer(conf.RemotePath, conf.Image, containerName)
+			if err != nil {
+				return outBuff, errBuff, err
+			}
+
+			outBuff, errBuff, err := executeCommand("docker", []string{"exec", containerName,
+				"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
+				"")
+			return outBuff, errBuff, err
+		}
+
+	}
+
+	outBuff, errBuff, err = executeCommand("docker", []string{"exec", containerName,
+		"/bin/sh", "-c", `cd "` + conf.RemotePath + `"; `+ runCommand +` ` +  strings.Join(os.Args[1:], " ")},
+		"")
+
+	return outBuff, errBuff, nil
+}
+
 type Config struct {
 	LocalPath	string
 	RemotePath	string
