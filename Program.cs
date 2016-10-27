@@ -49,30 +49,8 @@ namespace HackLang_Tools
 
             try
             {
-                Docker.OutputDataReceived += (sender, obj) =>
-                {
-                    if (obj.Data == null) return;
-                    if (obj.Data.EndsWith("is not running"))
-                    {
-                        Console.Error.WriteLine("Docker container is not running. Going to start it");
-                        StartDockerContainer();
-                        ExecInDockerContainer();
-                    }
-                    else if (obj.Data.Contains("No such container"))
-                    {
-                        CreateDockerContainer();
-                        ExecInDockerContainer();
-                    }
-                    else
-                    {
-                        Console.Error.WriteLine(obj.Data);
-                    }
-                };
-                Docker.ErrorDataReceived += (sender, obj) =>
-                {
-                    if (obj.Data == null) return;
-                    Console.WriteLine(obj.Data);
-                };
+                Docker.OutputDataReceived += ProcessDockerOutput;
+                Docker.ErrorDataReceived += ProcessDockerOutput;
 
                 Docker.Start();
 
@@ -84,6 +62,25 @@ namespace HackLang_Tools
             {
                 Console.Error.WriteLine(e.Message);
                 Environment.Exit(1);
+            }
+        }
+        static void ProcessDockerOutput(object sender, DataReceivedEventArgs e)
+        {
+            if (e.Data == null) return;
+            if (e.Data.EndsWith("is not running"))
+            {
+                Console.Error.WriteLine("Docker container is not running. Going to start it");
+                StartDockerContainer();
+                ExecInDockerContainer();
+            }
+            else if (e.Data.Contains("No such container"))
+            {
+                CreateDockerContainer();
+                ExecInDockerContainer();
+            }
+            else
+            {
+                Console.Error.WriteLine(e.Data);
             }
         }
         static void StartDockerContainer()
