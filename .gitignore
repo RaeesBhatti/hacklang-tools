@@ -1,5 +1,7 @@
 # IDE files
 .idea
 
-# Build directories
+# Packages and build directories
 bin
+obj
+packages
