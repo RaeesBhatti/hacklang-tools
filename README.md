@@ -12,6 +12,6 @@ Create a `.hhtools` files in the base directory of your project.
   "image": "hhvm/hhvm:3.12.1"
 }
 ```
-You can also specify `wsl` as provider to use Windows Subsystem for Linux. If you have installed HHVM there.
+You can also specify `wsl` as provider to use Windows Subsystem for Linux if you have installed HHVM there.
 
 Now, you can run `hh_client` against your project and it will work as if you're running `hh_client` inside the container or Windows Subsystem for Linux.
