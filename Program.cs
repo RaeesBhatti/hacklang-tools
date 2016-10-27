@@ -49,33 +49,35 @@ namespace HackLang_Tools
 
             try
             {
-                Docker.Start();
-
-                while (!Docker.StandardError.EndOfStream)
+                Docker.OutputDataReceived += (sender, obj) =>
                 {
-                    string line = Docker.StandardError.ReadLine();
-                    if(line.EndsWith("is not running"))
+                    if (obj.Data == null) return;
+                    if (obj.Data.EndsWith("is not running"))
                     {
                         Console.Error.WriteLine("Docker container is not running. Going to start it");
                         StartDockerContainer();
                         ExecInDockerContainer();
                     }
-                    else if (line.Contains("No such container"))
+                    else if (obj.Data.Contains("No such container"))
                     {
                         CreateDockerContainer();
                         ExecInDockerContainer();
                     }
                     else
                     {
-                        Console.Error.WriteLine(line);
+                        Console.Error.WriteLine(obj.Data);
                     }
-                }
-
-                while (!Docker.StandardOutput.EndOfStream)
+                };
+                Docker.ErrorDataReceived += (sender, obj) =>
                 {
-                    Console.WriteLine(Docker.StandardOutput.ReadLine());
-                }
+                    if (obj.Data == null) return;
+                    Console.WriteLine(obj.Data);
+                };
 
+                Docker.Start();
+
+                Docker.BeginErrorReadLine();
+                Docker.BeginOutputReadLine();
                 Docker.WaitForExit();
             }
             catch (Exception e)
