@@ -82,7 +82,7 @@ namespace HackLang_Tools
             }
             else
             {
-                Console.Error.WriteLine(e.Data);
+                Console.WriteLine(e.Data);
             }
         }
         static void StartDockerContainer()
