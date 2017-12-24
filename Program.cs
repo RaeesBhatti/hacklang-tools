@@ -18,9 +18,11 @@ namespace HackLang_Tools
         static Uri ConfigPath;
         static Config CurrentConfig;
         static string ContainerName;
+        static bool JSONOutput;
 
         static void Main(string[] args)
         {
+            JSONOutput = Environment.GetCommandLineArgs.Contains("--json")
             ExecPath = new Uri(System.IO.Path.GetDirectoryName(
                                                     System.IO.Path.GetFullPath(Environment.GetCommandLineArgs().First())));
             ConfigPath = FindConfigFile(ExecPath.LocalPath, ConfigFileName);
