@@ -110,13 +110,14 @@ namespace HackLang_Tools
         }
         static void CreateDockerContainer()
         {
+            string ProjectUnixPath = TranslatePathToUNIX(ProjectPath).AbsolutePath
             Process Docker = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = FindProgram("docker.exe"),
                     Arguments = String.Join(" ", new List<string>() {"run", "-d", "-t", "--name=" + ContainerName,
-                        "-v=" +TranslatePathToUNIX(ProjectPath).AbsolutePath+":"+TranslatePathToUNIX(ProjectPath).AbsolutePath, CurrentConfig.image }),
+                        "-v=" +ProjectUnixPath+":"+ProjectUnixPath, "-w=" + ProjectUnixPath, CurrentConfig.image }),
                     UseShellExecute = false
                 }
             };
