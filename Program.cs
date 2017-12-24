@@ -10,8 +10,8 @@ namespace HackLang_Tools
 {
     class Program
     {
-        static readonly string Prefix = "hhtools";
-        static readonly string ConfigFileName = "." + Prefix;
+        static readonly string Suffix = "hhtools";
+        static readonly string ConfigFileName = "." + Suffix;
 
         static Uri ExecPath;
         static Uri ProjectPath;
@@ -26,7 +26,7 @@ namespace HackLang_Tools
             ConfigPath = FindConfigFile(ExecPath.LocalPath, ConfigFileName);
             ProjectPath = new Uri(System.IO.Path.GetDirectoryName(ConfigPath.LocalPath));
             CurrentConfig = ParseConfig(ConfigPath);
-            ContainerName = Prefix + "_" + Hash(ProjectPath.AbsolutePath);
+            ContainerName = Suffix + "_" + Hash(ProjectPath.AbsolutePath);
 
             ExecInDockerContainer();
         }
