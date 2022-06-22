@@ -18,9 +18,11 @@ namespace HackLang_Tools
         static Uri ConfigPath;
         static Config CurrentConfig;
         static string ContainerName;
+        static bool JSONOutput;
 
         static void Main(string[] args)
         {
+            JSONOutput = Environment.GetCommandLineArgs.Contains("--json")
             ExecPath = new Uri(System.IO.Path.GetDirectoryName(
                                                     System.IO.Path.GetFullPath(Environment.GetCommandLineArgs().First())));
             ConfigPath = FindConfigFile(ExecPath.LocalPath, ConfigFileName);
@@ -80,7 +82,7 @@ namespace HackLang_Tools
             }
             else
             {
-                Console.Error.WriteLine(e.Data);
+                Console.WriteLine(e.Data);
             }
         }
         static void StartDockerContainer()
@@ -108,13 +110,14 @@ namespace HackLang_Tools
         }
         static void CreateDockerContainer()
         {
+            string ProjectUnixPath = TranslatePathToUNIX(ProjectPath).AbsolutePath
             Process Docker = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = FindProgram("docker.exe"),
                     Arguments = String.Join(" ", new List<string>() {"run", "-d", "-t", "--name=" + ContainerName,
-                        "-v=" +TranslatePathToUNIX(ProjectPath).AbsolutePath+":"+TranslatePathToUNIX(ProjectPath).AbsolutePath, CurrentConfig.image }),
+                        "-v=" +ProjectUnixPath+":"+ProjectUnixPath, "-w=" + ProjectUnixPath, CurrentConfig.image }),
                     UseShellExecute = false
                 }
             };
